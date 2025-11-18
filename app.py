@@ -19,13 +19,59 @@ model = joblib.load("model.joblib")
 
 # Load dataset (only for UI options)
 df = pd.read_csv("churn.csv")
-# drop id and target for UI reference
+
+# Drop ID + target if present
 if "customerID" in df.columns:
     df = df.drop("customerID", axis=1)
 if "Churn" in df.columns:
-    df_ui = df.drop("Churn", axis=1)
-else:
-    df_ui = df.copy()
+    df = df.drop("Churn", axis=1)
+
+# CLEANING EXACTLY LIKE TRAINING --------------------------------------
+
+service_cols = [
+    "MultipleLines",
+    "OnlineSecurity",
+    "OnlineBackup",
+    "DeviceProtection",
+    "TechSupport",
+    "StreamingTV",
+    "StreamingMovies"
+]
+
+# Clean Yes/No style columns (Internet-service related)
+for col in service_cols:
+    df[col] = (
+        df[col]
+        .astype(str)
+        .str.strip()
+        .str.lower()
+        .replace({
+            "yes": "Yes",
+            "no": "No",
+            "no internet service": "No"
+        })
+    )
+
+# Clean MultipleLines
+df["MultipleLines"] = (
+    df["MultipleLines"]
+    .astype(str)
+    .str.strip()
+    .str.lower()
+    .replace({
+        "yes": "Yes",
+        "no": "No",
+        "no phone service": "No"
+    })
+)
+
+# Standardize to Title Case
+for col in service_cols + ["MultipleLines"]:
+    df[col] = df[col].str.title()
+
+# NOW df_ui is safe for UI dropdowns
+df_ui = df.copy()
+
 
 # -----------------------------------
 # CSS for Beautiful UI
@@ -229,3 +275,4 @@ if st.button("🔍 Predict Churn", use_container_width=True):
             )
 
         st.markdown("</div>", unsafe_allow_html=True)
+
